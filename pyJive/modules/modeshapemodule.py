@@ -68,6 +68,7 @@ class ModeShapeModule(Module):
         globdat[gn.EIGENFREQS] = np.real_if_close(nfreqs_sorted)
         globdat[gn.MODALSHAPES] = modes_sorted
         globdat[gn.HISTORY] = np.asarray(modes_sorted)
+        globdat[pn.MATRIX2] = M
         
         print(f'ModeShapeModule: smallest natural frequency  {np.real_if_close(nfreqs_sorted[0]):.4e} rad / s') #TODO imaginary freqs?
         
