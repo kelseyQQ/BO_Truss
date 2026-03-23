@@ -142,39 +142,45 @@ class FrameViewModule(Module):
             xp.append(x)
             yp.append(y)
         
+        # if not self._interactive:
+
+        #     disp_s = disp[self._defaultStep]
+
+        #     fig, ax = plt.subplots()
+        #     plt.subplots_adjust(left=0.1, bottom=0., right=0.9, top=1.)
+        #     plt.ion()
+        #     plt.cla()
+        #     plt.axis('equal')
+        #     plt.axis('off')
+
+        #     plt.plot(xp[self._defaultStep], yp[self._defaultStep], 'k-o', linewidth=self._lw, markersize=self._msize, zorder=3)
+            
+        #     if self._vsize == -1:
+        #         xmin, xmax, ymin, ymax = plt.axis()
+        #         plotsize = np.min(np.abs([xmax - xmin, ymax - ymin]))
+        #         self._vsize = 0.25 * plotsize
+
+        #     if self._plotUndeformed:
+        #         self._plot_undeformed(globdat, elems, x0, y0)
+            
+        #     if self._plotDirichlet or self._plotNeumann:
+        #         self._plot_boundaries(globdat, xu, yu, step=self._defaultStep, init=True)
+            
+        #     if self._plotPlasticHinges:
+        #         self._plot_hinges(globdat, xu, yu, step=self._defaultStep, init=True)
+            
+        #     if len(self._plotStress) > 0:
+        #         for istep in range(len(globdat[gn.HISTORY])):
+        #             self._write_table(istep, globdat)
+        #         self.plot_stress(self._defaultStep, globdat, xu, yu, ax)
+            
+        #     plt.show(block=False)
+
         if not self._interactive:
-
-            disp_s = disp[self._defaultStep]
-
-            fig, ax = plt.subplots()
-            plt.subplots_adjust(left=0.1, bottom=0., right=0.9, top=1.)
-            plt.ion()
-            plt.cla()
-            plt.axis('equal')
-            plt.axis('off')
-
-            plt.plot(xp[self._defaultStep], yp[self._defaultStep], 'k-o', linewidth=self._lw, markersize=self._msize, zorder=3)
-            
-            if self._vsize == -1:
-                xmin, xmax, ymin, ymax = plt.axis()
-                plotsize = np.min(np.abs([xmax - xmin, ymax - ymin]))
-                self._vsize = 0.25 * plotsize
-
-            if self._plotUndeformed:
-                self._plot_undeformed(globdat, elems, x0, y0)
-            
-            if self._plotDirichlet or self._plotNeumann:
-                self._plot_boundaries(globdat, xu, yu, step=self._defaultStep, init=True)
-            
-            if self._plotPlasticHinges:
-                self._plot_hinges(globdat, xu, yu, step=self._defaultStep, init=True)
-            
             if len(self._plotStress) > 0:
                 for istep in range(len(globdat[gn.HISTORY])):
                     self._write_table(istep, globdat)
-                self.plot_stress(self._defaultStep, globdat, xu, yu, ax)
-            
-            plt.show(block=False)
+            return
 
         elif self._interactive:
             if gn.HISTORY not in globdat:
