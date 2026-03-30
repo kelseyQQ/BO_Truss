@@ -21,7 +21,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-np.random.seed(23)
+np.random.seed(42)
 
 def snap_area_to_discrete(area_values):
     AREA_SET = np.arange(2.00, 21.75 + 0.001, 0.25)
@@ -162,14 +162,16 @@ def finite_element_solver(x):
 
 def feasibility_probability(x, gp, threshold):
     mu, sigma = gp.predict(x.reshape(1, -1), return_std=True)
+    sigma = np.maximum(sigma, 1e-12)
     prob = norm.cdf((threshold - mu) / sigma)
-    # print(f"mu: {mu}, sigma: {sigma}, threshold: {threshold}, mu-tr: {mu-threshold}, prob: {prob}")
     return prob
 
+def feasibility_power(iteration, n_iter, p_start=0.5, p_end=2.0):
+    return p_start + (p_end - p_start) * (iteration / n_iter)
 
-def EI(x, gp_Y, gp_constr, Y_samples, threshold, xi, best_y):
+def EI(x, gp_Y, gp_constr, Y_samples, threshold, xi, best_y, iteration, n_iter):
     mu, sigma = gp_Y.predict(x.reshape(1, -1), return_std=True)
-    mu, sigma = mu[0], sigma[0]
+    mu, sigma = mu[0], max(sigma[0], 1e-12)
     best = best_y
 
     z = (best - mu - xi) / sigma
@@ -183,8 +185,10 @@ def EI(x, gp_Y, gp_constr, Y_samples, threshold, xi, best_y):
         prob_list.append(p_i)
         prob *= p_i
 
-    print('')
-    print(f"mu: {mu}, sigma: {sigma}, best: {best}, xi: {xi}, z: {z}, ei: {ei}, prob: {prob}, EI: {ei * prob}")
+    # print('')
+    # print(f"mu: {mu}, sigma: {sigma}, best: {best}, xi: {xi}, z: {z}, ei: {ei}, prob: {prob}, EI: {ei * prob}")
+    power = feasibility_power(iteration, n_iter, p_start=0.5, p_end=2.0)
+    return -ei * (prob ** power), prob_list
 
     return -ei * prob**2, prob_list
 
@@ -258,8 +262,8 @@ def bayesian_optimization(n_iter=100, improvement_threshold=1e-3, patience=50, d
         for _ in range(36)
     ]
 
-    gp_Y = GaussianProcessRegressor(kernel=kernel_Y, alpha=0)
-    gp_constr = [GaussianProcessRegressor(kernel=kernel_constr[i], alpha=0) for i in range(36)]
+    gp_Y = GaussianProcessRegressor(kernel=kernel_Y, alpha=1e-8)
+    gp_constr = [GaussianProcessRegressor(kernel=kernel_constr[i], alpha=1e-6) for i in range(36)]
 
     valid_idx = np.all(constr_samples_unscaled <= 0, axis=0)
     if not np.any(valid_idx):
@@ -301,7 +305,7 @@ def bayesian_optimization(n_iter=100, improvement_threshold=1e-3, patience=50, d
 
             gp_Y = GaussianProcessRegressor(kernel=optimized_kernel_Y, alpha=0, optimizer=None)
             gp_constr = [
-                GaussianProcessRegressor(kernel=optimized_kernel_constr[i], alpha=0, optimizer=None)
+                GaussianProcessRegressor(kernel=optimized_kernel_constr[i], alpha=1e-6, optimizer=None)
                 for i in range(36)
             ]
 
@@ -314,15 +318,15 @@ def bayesian_optimization(n_iter=100, improvement_threshold=1e-3, patience=50, d
         xi = adaptive_xi_linear(iteration, n_iter, xi_max=-20, xi_min=-2)
 
         def acquisition(x):
-            return EI(x, gp_Y, gp_constr, Y_samples, threshold, xi, best_y)
+            return EI(x, gp_Y, gp_constr, Y_samples, threshold, xi, best_y, iteration, n_iter)
 
         with contextlib.redirect_stdout(io.StringIO()):
             result = differential_evolution(
                 lambda x: acquisition(x)[0],
                 bounds=bounds,
                 strategy='best1bin',
-                popsize=5,
-                maxiter=10,
+                popsize=15,
+                maxiter=20,
                 tol=1e-6,
                 polish=True
             )
@@ -430,15 +434,15 @@ def bayesian_optimization(n_iter=100, improvement_threshold=1e-3, patience=50, d
     return best_feasible_x_unscaled, best_feasible_y_unscaled
 
 
-for i in range(1):
-    print(f'Run: {i+1}')
+if __name__ == "__main__":
+    for i in range(1):
+        print(f'Run: {i+1}')
+        start_time = time.time()
+        variables, weight = bayesian_optimization(data_path="initial_data_36.npz")
+        end_time = time.time()
 
-    start_time = time.time()
-    variables, weight = bayesian_optimization(data_path="initial_data_36.npz")
-    end_time = time.time()
-
-    print('Best values')
-    print(f'time: {end_time - start_time}')
-    print(f'variables: {variables}')
-    print(f'weight: {weight}')
-    print('')
+        print('Best values')
+        print(f'time: {end_time - start_time}')
+        print(f'variables: {variables}')
+        print(f'weight: {weight}')
+        print('')
